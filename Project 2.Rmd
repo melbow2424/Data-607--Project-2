@@ -1,0 +1,147 @@
+---
+title: "Project 2"
+author: "Melissa Bowman"
+coauthor: "Josh Iden"
+date: "2022-10-09"
+output: html_document
+---
+In project 2, three of the “wide” datasets identified in the Week 6 Discussion items needed to be selected and cleaning. Each discussion item also had an analysis that needed to be addressed to complete the assignment. The three databases used were National Endowment for the Arts, Jhalak Das dataset, and Animated TV Shows Around the World (1948 - 2022).  
+
+
+# Discussion Item 1: National Endowment for the Arts <br>
+ 
+Analysis Question: Scatter plot of artist income by type and overall U.S. labor force 
+
+```{r libraries}
+
+#Loading in libraries
+library(dplyr)
+library(tidyverse)
+library(plyr)
+library(ggplot2)
+
+# Reading in csv file from GitHub.
+# Any blank cell into NA
+# Skip first 2 rows
+# Dropping all NA
+filepath <- 'https://raw.githubusercontent.com/melbow2424/Data-607--Project-2/main/Table1aArtistProfile.csv'
+artist_profile <- read.csv(filepath, na.strings=c("","NA"), skip = 2) %>%
+  drop_na()
+
+# Header row to uppercase
+# Replacing the first cell with DEMOGRAPHIC
+colnames(artist_profile) <- toupper(colnames(artist_profile)) %>%
+  replace(1, "DEMOGRAPHIC")
+
+# Creating data frame for only rows of index 9 to 12
+df2_transformed <- artist_profile[9:12,]
+
+# Printing data frame
+head(df2_transformed)
+
+# Pivoting columns to job for plot
+df_pivot <- df2_transformed %>%
+  pivot_longer(cols=c('ENTIRE.U.S..LABOR.FORCE', 
+                      'ALL.ARTISTS'), names_to='jobs' ,values_to = "income")%>%
+  filter(DEMOGRAPHIC == "Median earnings of workers employed full-year/full time4" |
+           DEMOGRAPHIC == "Men" |
+           DEMOGRAPHIC == "Women")
+
+# Plot jobs vs income of Median earnings, Men, and Women
+ggplot(data = df_pivot, aes(x = jobs, y = income, color = DEMOGRAPHIC)) +
+  geom_point()
+```
+
+<br>
+<br>
+
+# Discussion Item 2: Jhalak Das data set <br>
+
+Analysis Question: <br>
+* The three terms be in the same column called terms or semesters.<br>
+* “sex and age” should be two distinct columns; ‘sex’ and ‘age’.<br>
+* Instead of taking “test number” as variable, we should consider two columns with headers ‘test1’ and ‘test 2’ accordingly.<br>
+* Finally, we should split the entire table into two for two types of observational units: STUDENTS and RESULTS. In the students table, we can keep id, name, phone, sex and age columns. On the results table, we can take the rest; id, terms, test1 and test2 columns. In this way we can join the two tables at any instance with id as primary key.
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(stringr) 
+
+# Reading in csv file from GitHub.
+file <- "https://raw.githubusercontent.com/josh1den/DATA-607/Projects/Project%202/jhalak_das_untidy.csv"
+df <- read.csv(file)
+head(df)
+
+# split up sex and age
+# pivot term columns to single column, term, column: grade
+# pivot column into multiple columns and in row have grade variables
+df_clean <- df %>%
+  separate(col=sex.and.age, into=c("sex","age"), sep="_", convert=TRUE)%>%
+  pivot_longer(cols=c("term.1","term.2", "term.3"), names_to="term",
+               names_pattern="([0-3])", values_to = "grade") %>%
+  pivot_wider(names_from = 'test.number', values_from = 'grade')
+
+head(df_clean)
+
+# Data frame split into two for two
+
+students <- df_clean[c('id', 'name', 'phone', 'sex', 'age')]
+
+head(students)
+
+results <- df_clean[c('id', 'term', 'test 1', 'test 2')]
+
+head(results)
+```
+
+# Discussion Item 3: Animated TV Shows Around the World <br>
+
+Analysis Question: Which animated TV series produced the most episodes and from which county. 
+```{r}
+library(dplyr)
+library(tidyverse)
+library(plyr)
+
+# Reading in csv files from GitHub. There were two different csv files.
+# Any blank cell into NA
+
+animated_tv_1948_1986 = read.csv('https://raw.githubusercontent.com/melbow2424/Data-607--Project-2/main/Animated%20TV%20Shows%20Around%20the%20World%20(1948%20-%201986).csv',
+                                 na.strings=c("","NA"))
+
+animated_tv_1987_2022 = read.csv('https://raw.githubusercontent.com/melbow2424/Data-607--Project-2/main/Animated%20TV%20Shows%20Around%20the%20World%20(1987%20-%202022).csv',
+                                 na.strings=c("","NA"))
+
+
+# Combining csv file to get all years from 1948 to 2022 in years 
+
+animated_tv <- rbind.fill(animated_tv_1948_1986,animated_tv_1987_2022) %>%
+  filter(Episodes != "TBA") 
+
+# Viewing dataframe
+
+head(animated_tv)
+
+#Checking structure of data frame
+
+str(animated_tv)
+
+
+#When checking the structure, Episodes of tv shows are in char variable. 
+#To find the greatest number of episodes of tv shows, char needed to change to integer (or num).
+#I chose integer 
+
+animated_tv <- transform(animated_tv, Episodes = as.integer(Episodes))
+
+# Checking structure of data frame
+str(animated_tv)
+
+
+#Creating data frame with just the max (greatest number) of episodes of tv shows.
+most_episodes <- animated_tv[animated_tv$Episodes == max(animated_tv$Episodes, na.rm = TRUE) ,]
+
+
+#Displaying that dataframe
+head(most_episodes, 1)
+```
+The animated TV series with the most episodes is Sazae-san from Japan. It premiered in 1969 and is still running today.
